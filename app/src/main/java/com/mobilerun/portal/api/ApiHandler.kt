@@ -497,10 +497,8 @@ class ApiHandler(
     }
 
     fun startApp(packageName: String, activityName: String? = null): ApiResponse {
-        val service = MobilerunAccessibilityService.getInstance()
-            ?: return ApiResponse.Error("Accessibility Service not available")
-
         return try {
+            val pm = getPackageManager()
             val intent = if (!activityName.isNullOrEmpty() && activityName != "null") {
                 Intent().apply {
                     setClassName(
@@ -510,13 +508,13 @@ class ApiHandler(
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 }
             } else {
-                service.packageManager.getLaunchIntentForPackage(packageName)?.apply {
+                pm.getLaunchIntentForPackage(packageName)?.apply {
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 }
             }
 
             if (intent != null) {
-                service.startActivity(intent)
+                context.startActivity(intent)
                 ApiResponse.Success("Started app $packageName")
             } else {
                 Log.e(
@@ -530,8 +528,8 @@ class ApiHandler(
                     fallbackIntent.setPackage(packageName)
                     fallbackIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
 
-                    if (fallbackIntent.resolveActivity(service.packageManager) != null) {
-                        service.startActivity(fallbackIntent)
+                    if (fallbackIntent.resolveActivity(pm) != null) {
+                        context.startActivity(fallbackIntent)
                         ApiResponse.Success("Started app $packageName (fallback)")
                     } else {
                         ApiResponse.Error("Could not create intent for $packageName")
