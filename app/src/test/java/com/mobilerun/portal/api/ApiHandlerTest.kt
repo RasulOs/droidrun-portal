@@ -54,14 +54,56 @@ class ApiHandlerTest {
     }
 
     @Test
-    fun startApp_usesHandlerContextWhenStateRepoHasNoService() {
+    fun startApp_requiresAccessibilityWhenStateRepoHasNoService() {
         val context = mockk<Context>(relaxed = true)
         val packageManager = mockk<PackageManager>(relaxed = true)
+        val handler = createHandler(
+            stateRepo = StateRepository(service = null),
+            ime = null,
+            context = context,
+            packageManager = packageManager,
+        )
+
+        assertEquals(
+            ApiResponse.Error("App launch requires Accessibility service"),
+            handler.startApp("com.example"),
+        )
+
+        verify(exactly = 0) { context.startActivity(any()) }
+        verify(exactly = 0) { packageManager.getLaunchIntentForPackage(any()) }
+    }
+
+    @Test
+    fun startApp_explicitActivityRequiresAccessibilityWhenStateRepoHasNoService() {
+        val context = mockk<Context>(relaxed = true)
+        val packageManager = mockk<PackageManager>(relaxed = true)
+        val handler = createHandler(
+            stateRepo = StateRepository(service = null),
+            ime = null,
+            context = context,
+            packageManager = packageManager,
+        )
+
+        assertEquals(
+            ApiResponse.Error("App launch requires Accessibility service"),
+            handler.startApp("com.example", ".MainActivity"),
+        )
+
+        verify(exactly = 0) { context.startActivity(any()) }
+        verify(exactly = 0) { packageManager.getLaunchIntentForPackage(any()) }
+    }
+
+    @Test
+    fun startApp_usesHandlerContextWhenStateRepoHasService() {
+        val context = mockk<Context>(relaxed = true)
+        val packageManager = mockk<PackageManager>(relaxed = true)
+        val stateRepo = mockk<StateRepository>(relaxed = true)
         val launchIntent = mockk<Intent>(relaxed = true)
+        every { stateRepo.hasAccessibilityService } returns true
         every { packageManager.getLaunchIntentForPackage("com.example") } returns launchIntent
         every { launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) } returns launchIntent
         val handler = createHandler(
-            stateRepo = StateRepository(service = null),
+            stateRepo = stateRepo,
             ime = null,
             context = context,
             packageManager = packageManager,
@@ -74,16 +116,18 @@ class ApiHandlerTest {
     }
 
     @Test
-    fun startApp_explicitActivityUsesHandlerContextWhenStateRepoHasNoService() {
+    fun startApp_explicitActivityUsesHandlerContextWhenStateRepoHasService() {
         val context = mockk<Context>(relaxed = true)
         val packageManager = mockk<PackageManager>(relaxed = true)
+        val stateRepo = mockk<StateRepository>(relaxed = true)
+        every { stateRepo.hasAccessibilityService } returns true
         mockkConstructor(Intent::class)
         every {
             anyConstructed<Intent>().setClassName("com.example", "com.example.MainActivity")
         } returns mockk(relaxed = true)
         every { anyConstructed<Intent>().addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) } returns mockk(relaxed = true)
         val handler = createHandler(
-            stateRepo = StateRepository(service = null),
+            stateRepo = stateRepo,
             ime = null,
             context = context,
             packageManager = packageManager,

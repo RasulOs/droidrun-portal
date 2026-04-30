@@ -69,6 +69,7 @@ class ApiHandler(
         private const val ENABLE_UI_STOP_FALLBACK = true
         private const val FORCE_STOP_SCREEN_READY_TIMEOUT_MS = 5000L
         private const val ACCESSIBILITY_SERVICE_NOT_AVAILABLE = "Accessibility service not available"
+        private const val APP_LAUNCH_REQUIRES_ACCESSIBILITY = "App launch requires Accessibility service"
         const val ACTION_INSTALL_RESULT = "com.mobilerun.portal.action.INSTALL_RESULT"
         const val EXTRA_INSTALL_SUCCESS = "install_success"
         const val EXTRA_INSTALL_MESSAGE = "install_message"
@@ -498,6 +499,10 @@ class ApiHandler(
     }
 
     fun startApp(packageName: String, activityName: String? = null): ApiResponse {
+        if (!stateRepo.hasAccessibilityService) {
+            return ApiResponse.Error(APP_LAUNCH_REQUIRES_ACCESSIBILITY)
+        }
+
         return try {
             val pm = getPackageManager()
             val intent = if (!activityName.isNullOrEmpty() && activityName != "null") {
